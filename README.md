@@ -1,5 +1,4 @@
-Please add me as a Agent Developer [Published] on Discord, my username is HorSP#7834.
-# Blacklisted Address Agent
+# High Gas Agent
 
 ## Description
 

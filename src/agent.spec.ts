@@ -1,20 +1,19 @@
-import { 
-  Finding,
-  FindingSeverity,
+import {
   FindingType,
+  FindingSeverity,
+  Finding,
   HandleTransaction,
   createTransactionEvent
 } from "forta-agent"
 import agent from "./agent"
 
-describe("blacklisted address agent", () => {
-  let handleTransaction: HandleTransaction;
+describe("high gas agent", () => {
+  let handleTransaction: HandleTransaction
 
-  const createTxEventWithAddresses = (addresses: {[addr: string]: boolean}) => createTransactionEvent({
+  const createTxEventWithGasUsed = (gasUsed: string) => createTransactionEvent({
     transaction: {} as any,
-    receipt: {} as any,
+    receipt: { gasUsed } as any,
     block: {} as any,
-    addresses
   })
 
   beforeAll(() => {
@@ -22,31 +21,27 @@ describe("blacklisted address agent", () => {
   })
 
   describe("handleTransaction", () => {
-    it("returns empty findings if no blacklisted address is involved", async () => {
-      const txEvent = createTxEventWithAddresses({})
+    it("returns empty findings if gas used is below threshold", async () => {
+      const txEvent = createTxEventWithGasUsed("1")
 
       const findings = await handleTransaction(txEvent)
 
       expect(findings).toStrictEqual([])
     })
 
-    it("returns a finding if a blacklisted address is involved", async () => {
-      const address = "0x02788b3452849601e63ca70ce7db72c30c3cfd18";
-      const txEvent = createTxEventWithAddresses({ [address]: true })
+    it("returns a finding if gas used is above threshold", async () => {
+      const txEvent = createTxEventWithGasUsed("1000001")
 
       const findings = await handleTransaction(txEvent)
 
       expect(findings).toStrictEqual([
         Finding.fromObject({
-          name: "Blacklisted Address",
-          description: `Transaction involving a blacklisted address: ${address}`,
-          alertId: "FORTA-3",
+          name: "High Gas Used",
+          description: `Gas Used: ${txEvent.gasUsed}`,
+          alertId: "FORTA-1",
           type: FindingType.Suspicious,
-          severity: FindingSeverity.High,
-          metadata: {
-            address
-          }
-        })
+          severity: FindingSeverity.Medium
+        }),
       ])
     })
   })

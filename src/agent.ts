@@ -1,39 +1,45 @@
+import BigNumber from 'bignumber.js'
 import { 
+  BlockEvent, 
   Finding, 
+  HandleBlock, 
   HandleTransaction, 
   TransactionEvent, 
   FindingSeverity, 
   FindingType 
 } from 'forta-agent'
 
-const BLACKLIST: { [address: string] : boolean } = {
-  "0x02788b3452849601e63ca70ce7db72c30c3cfd18": true,
-  "0x499875b33e55c36a80d544e7ba3ca96cb52b1361": true,
-  "0x2f0830b9cc296e5baef35381a78e77f42a1fe4ad": true
-}
+let findingsCount = 0
 
-// report finding if any addresses involved in transaction are blacklisted
 const handleTransaction: HandleTransaction = async (txEvent: TransactionEvent) => {
   const findings: Finding[] = []
 
-  const blacklistedAddress = Object.keys(txEvent.addresses).find(address => BLACKLIST[address])
-  if (!blacklistedAddress) return findings
+  // limiting this agent to emit only 5 findings so that the alert feed is not spammed
+  if (findingsCount >= 5) return findings;
 
-  findings.push(
-    Finding.fromObject({
-      name: "Blacklisted Address",
-      description: `Transaction involving a blacklisted address: ${blacklistedAddress}`,
-      alertId: "FORTA-3",
-      type: FindingType.Suspicious,
-      severity: FindingSeverity.High,
-      metadata: {
-        address: blacklistedAddress
-      }
-    }
-  ))
+  // create finding if gas used is higher than threshold
+  const gasUsed = new BigNumber(txEvent.gasUsed)
+  if (gasUsed.isGreaterThan("1000000")) {
+    findings.push(Finding.fromObject({
+      name: "High Gas Used",
+      description: `Gas Used: ${gasUsed}`,
+      alertId: "FORTA-1",
+      severity: FindingSeverity.Medium,
+      type: FindingType.Suspicious
+    }))
+    findingsCount++
+  }
+
   return findings
 }
 
+// const handleBlock: HandleBlock = async (blockEvent: BlockEvent) => {
+//   const findings: Finding[] = [];
+//   // detect some block condition
+//   return findings;
+// }
+
 export default {
-  handleTransaction
+  handleTransaction,
+  // handleBlock
 }
